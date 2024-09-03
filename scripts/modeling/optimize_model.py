@@ -59,20 +59,21 @@ if __name__ == "__main__":
     X_test = test_data.drop(['Date', 'Close'], axis=1)
     y_test = test_data['Close'] > test_data['Close'].shift(1)
 
-    # Definindo os parâmetros para Grid Search
+    # Ajuste dos parâmetros para o Grid Search com mais iterações
     param_grid = {
-        'hidden_layer_sizes': [(50, 50, 50), (50, 100, 50), (100,)],
-        'activation': ['tanh', 'relu'],
-        'solver': ['sgd', 'adam'],
-        'alpha': [0.0001, 0.05],
-        'learning_rate': ['constant', 'adaptive'],
+        'hidden_layer_sizes': [(100,), (50, 50), (100, 50)],  # Testa diferentes tamanhos de camadas ocultas
+        'activation': ['tanh', 'relu'],  # Testa diferentes funções de ativação
+        'solver': ['adam'],  # Usa o otimizador 'adam'
+        'alpha': [0.0001, 0.001],  # Regularização
+        'learning_rate': ['constant', 'adaptive'],  # Diferentes métodos de taxa de aprendizado
+        'max_iter': [2000]  # Aumenta o número de iterações para melhorar a convergência
     }
 
     # Configurando o Grid Search
-    grid_search = GridSearchCV(MLPClassifier(max_iter=1000), param_grid, n_jobs=-1, cv=3)
+    grid_search = GridSearchCV(MLPClassifier(), param_grid, n_jobs=-1, cv=3)
 
     # Executando o Grid Search para encontrar os melhores parâmetros
-    print("Iniciando o Grid Search para otimizar o MLPClassifier...")
+    print("Iniciando o Grid Search para otimizar o MLPClassifier com mais iterações...")
     grid_search.fit(X_train, y_train)
 
     # Exibindo os melhores parâmetros encontrados
