@@ -6,9 +6,15 @@ import os
 # Diretório base do projeto
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 
-# Caminho para o arquivo CSV dos dados do BTC
-input_file = os.path.join(base_dir, 'data/raw/btc_data.csv')
-output_file = os.path.join(base_dir, 'data/processed/clean_btc_data.csv')
+# Caminho para o diretório de saída
+output_dir = os.path.join(base_dir, 'data/processed/')
+
+# Verifica se o diretório de saída existe; se não, cria o diretório
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Caminho para o arquivo CSV dos dados limpos
+output_file = os.path.join(output_dir, 'clean_btc_data.csv')
 
 def load_data(file_path):
     """
@@ -73,8 +79,15 @@ def clean_data(df):
     return df
 
 if __name__ == "__main__":
-    # Carrega os dados
-    btc_data = load_data(input_file)
+    # Caminho para o arquivo CSV dos dados brutos do BTC
+    input_file = os.path.join(base_dir, 'data/raw/btc_data.csv')
+    
+    try:
+        # Carrega os dados
+        btc_data = load_data(input_file)
+    except FileNotFoundError:
+        print(f"Arquivo de dados bruto não encontrado: {input_file}. Verifique se o script de coleta foi executado corretamente.")
+        exit(1)
     
     # Explora os dados
     explore_data(btc_data)

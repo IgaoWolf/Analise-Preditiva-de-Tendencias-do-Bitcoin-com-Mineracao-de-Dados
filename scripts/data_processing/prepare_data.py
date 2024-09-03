@@ -8,6 +8,8 @@ base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 
 # Caminho para o arquivo CSV dos dados limpos do BTC
 input_file = os.path.join(base_dir, 'data/processed/clean_btc_data.csv')
+
+# Caminhos para os arquivos de saída de treino e teste
 output_file_train = os.path.join(base_dir, 'data/processed/train_data.csv')
 output_file_test = os.path.join(base_dir, 'data/processed/test_data.csv')
 
@@ -54,8 +56,14 @@ def normalize_data(df):
     Retorno:
     - DataFrame normalizado.
     """
+    # Remove a coluna de data antes da normalização
+    df_features = df.drop(['Date'], axis=1)
+
     scaler = MinMaxScaler()
-    df_scaled = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+    df_scaled = pd.DataFrame(scaler.fit_transform(df_features), columns=df_features.columns)
+    
+    # Adiciona de volta a coluna 'Date' após a normalização
+    df_scaled['Date'] = df['Date'].values
     
     return df_scaled
 
@@ -76,8 +84,12 @@ def split_data(df, train_size=0.8):
     return train_data, test_data
 
 if __name__ == "__main__":
-    # Carregar dados limpos
-    btc_data = pd.read_csv(input_file)
+    try:
+        # Carregar dados limpos
+        btc_data = pd.read_csv(input_file)
+    except FileNotFoundError:
+        print(f"Arquivo de dados limpo não encontrado: {input_file}. Verifique se o script explore_clean_data.py foi executado corretamente.")
+        exit(1)
     
     # Criar novos recursos
     btc_data_with_features = create_features(btc_data)
