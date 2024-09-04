@@ -48,10 +48,6 @@ Aplicamos validação cruzada K-Fold e calculamos métricas como acurácia, prec
 
 Desenvolvemos uma API usando Flask para servir o modelo em produção e permitir previsões em tempo real. A API recebe dados de entrada, processa-os e retorna a previsão do modelo.
 
-### Hospedagem e Monitoramento
-
-A API foi hospedada em um ambiente de nuvem com ferramentas de monitoramento configuradas para garantir sua disponibilidade e desempenho.
-
 ## Resultados e Discussão
 
 ### Desempenho do Modelo
