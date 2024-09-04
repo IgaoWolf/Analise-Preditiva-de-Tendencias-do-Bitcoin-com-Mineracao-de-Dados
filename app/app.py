@@ -9,6 +9,7 @@ import joblib
 import yfinance as yf
 from sklearn.linear_model import LinearRegression
 from apscheduler.schedulers.background import BackgroundScheduler
+import pytz  # Importar pytz para conversão de fuso horário
 
 # Inicializar o servidor Flask
 server = Flask(__name__)
@@ -20,18 +21,28 @@ model = joblib.load(model_path)
 # Variável global para armazenar os dados mais recentes
 latest_data = pd.DataFrame()
 
+# Função para converter o horário de UTC para o horário de Brasília
+def convert_to_brasilia_time(utc_time):
+    brasilia_tz = pytz.timezone('America/Sao_Paulo')
+    return utc_time.astimezone(brasilia_tz)
+
 # Função para coletar dados em tempo real da API do Yahoo Finance
 def fetch_real_time_data():
     global latest_data
     symbol = "BTC-USD"  # Exemplo: símbolo do Bitcoin
     data = yf.download(tickers=symbol, period='1d', interval='1m')  # Coletar dados de 1 dia em intervalos de 1 minuto
     data.reset_index(inplace=True)
+    
+    # Converte a coluna 'Datetime' para o horário de Brasília
+    data['Datetime'] = pd.to_datetime(data['Datetime'])
+    data['Datetime'] = data['Datetime'].apply(convert_to_brasilia_time)
+
     latest_data = data
     print("Dados atualizados:", latest_data.tail())
 
-# Agendar a coleta de dados a cada 5 minutos
+# Agendar a coleta de dados a cada 1 minuto
 scheduler = BackgroundScheduler()
-scheduler.add_job(fetch_real_time_data, 'interval', minutes=5)
+scheduler.add_job(fetch_real_time_data, 'interval', minutes=1)
 scheduler.start()
 
 # Carregar dados iniciais
@@ -64,10 +75,10 @@ def update_graphs():
     global latest_data
     df = latest_data.copy()
     df['Date'] = pd.to_datetime(df['Datetime'])
-    
+
     # Gráfico de linha para a evolução do preço do Bitcoin
     line_fig = px.line(df, x='Date', y='Close', title='Evolução do Preço do Bitcoin', labels={'Date': 'Data', 'Close': 'Preço de Fechamento'})
-    
+
     # Gráfico de candlestick para visualizar os movimentos de mercado
     candlestick_fig = go.Figure(data=[go.Candlestick(x=df['Date'],
                                                      open=df['Open'],
@@ -126,7 +137,7 @@ app.layout = html.Div([
     dcc.Graph(id='rsi-fig'),
     dcc.Graph(id='price-comparison-fig'),
     dcc.Graph(id='regression-fig'),
-    dcc.Interval(id='interval-component', interval=5*60*1000, n_intervals=0)  # Atualiza a cada 5 minutos
+    dcc.Interval(id='interval-component', interval=30*1000, n_intervals=0)  # Atualiza a cada 30 segundos
 ])
 
 # Callback para atualizar os gráficos
