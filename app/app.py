@@ -94,8 +94,8 @@ def update_graphs():
     heatmap_fig = px.imshow(corr, title='Mapa de Correlação entre Variáveis', labels={'color': 'Correlação'})
 
     # Gráfico de Média Móvel
-    df['SMA_10'] = df['Close'].rolling(window=10).mean()  # Média móvel de 10 dias
-    df['SMA_30'] = df['Close'].rolling(window=30).mean()  # Média móvel de 30 dias
+    df['SMA_10'] = df['Close'].rolling(window=10).mean()
+    df['SMA_30'] = df['Close'].rolling(window=30).mean()
     ma_fig = px.line(df, x='Date', y=['Close', 'SMA_10', 'SMA_30'], title='Preço de Fechamento e Médias Móveis', labels={'value': 'Preço', 'Date': 'Data'})
     ma_fig.update_traces(marker=dict(size=2))
 
@@ -112,8 +112,31 @@ def update_graphs():
     rsi_fig.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Sobrecomprado", annotation_position="top left")
     rsi_fig.add_hline(y=30, line_dash="dash", line_color="green", annotation_text="Sobrevendido", annotation_position="bottom right")
 
-    # Gráfico de Comparação de Preços de Abertura e Fechamento
-    price_comparison_fig = px.bar(df, x='Date', y=[df['Close'] - df['Open']], title='Diferença de Preços de Abertura e Fechamento', labels={'value': 'Diferença de Preço', 'Date': 'Data'})
+    # Gráfico de MACD (Moving Average Convergence Divergence)
+    df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
+    df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
+    df['MACD'] = df['EMA_12'] - df['EMA_26']
+    df['Signal Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
+    macd_fig = px.line(df, x='Date', y=['MACD', 'Signal Line'], title='MACD e Linha de Sinal', labels={'value': 'Valor', 'Date': 'Data'})
+
+    # Gráfico de Bollinger Bands
+    df['Upper Band'] = df['SMA_10'] + (2 * df['Close'].rolling(window=10).std())
+    df['Lower Band'] = df['SMA_10'] - (2 * df['Close'].rolling(window=10).std())
+    bollinger_fig = px.line(df, x='Date', y=['Close', 'Upper Band', 'Lower Band'], title='Bollinger Bands', labels={'value': 'Preço', 'Date': 'Data'})
+
+    # Gráfico de Momentum
+    df['Momentum'] = df['Close'].diff(4)
+    momentum_fig = px.line(df, x='Date', y='Momentum', title='Momentum do Preço do Bitcoin', labels={'Date': 'Data', 'Momentum': 'Momentum'})
+
+    # Gráfico de VWAP (Volume Weighted Average Price)
+    df['CumVolume'] = df['Volume'].cumsum()
+    df['CumCloseVol'] = (df['Close'] * df['Volume']).cumsum()
+    df['VWAP'] = df['CumCloseVol'] / df['CumVolume']
+    vwap_fig = px.line(df, x='Date', y='VWAP', title='VWAP - Volume Weighted Average Price', labels={'Date': 'Data', 'VWAP': 'VWAP'})
+
+    # Gráfico de Análise de Sentimento (Este é um exemplo, ajuste conforme suas fontes de dados)
+    df['Sentiment'] = np.random.uniform(-1, 1, len(df))  # Dados simulados de sentimento
+    sentiment_fig = px.bar(df, x='Date', y='Sentiment', title='Análise de Sentimento do Mercado', labels={'Date': 'Data', 'Sentiment': 'Sentimento'})
 
     # Gráfico de Regressão Linear
     df['Date_ordinal'] = pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)
@@ -124,7 +147,7 @@ def update_graphs():
     regression_fig = px.scatter(df, x='Date', y='Close', title='Previsão do Preço Usando Regressão Linear')
     regression_fig.add_trace(go.Scatter(x=df['Date'], y=df['Predicted_Close'], mode='lines', name='Linha de Regressão'))
 
-    return line_fig, candlestick_fig, heatmap_fig, ma_fig, volume_fig, rsi_fig, price_comparison_fig, regression_fig
+    return line_fig, candlestick_fig, heatmap_fig, ma_fig, volume_fig, rsi_fig, macd_fig, bollinger_fig, momentum_fig, vwap_fig, sentiment_fig, regression_fig
 
 # Configurar o layout do Dash
 app.layout = html.Div([
@@ -135,9 +158,13 @@ app.layout = html.Div([
     dcc.Graph(id='ma-fig'),
     dcc.Graph(id='volume-fig'),
     dcc.Graph(id='rsi-fig'),
-    dcc.Graph(id='price-comparison-fig'),
+    dcc.Graph(id='macd-fig'),
+    dcc.Graph(id='bollinger-fig'),
+    dcc.Graph(id='momentum-fig'),
+    dcc.Graph(id='vwap-fig'),
+    dcc.Graph(id='sentiment-fig'),
     dcc.Graph(id='regression-fig'),
-    dcc.Interval(id='interval-component', interval=10*1000, n_intervals=0, max_intervals=-1)  # Atualiza a cada 10 segundos
+    dcc.Interval(id='interval-component', interval=10*1000, n_intervals=0)  # Atualiza a cada 10 segundos
 ])
 
 # Callback para atualizar os gráficos
@@ -148,7 +175,11 @@ app.layout = html.Div([
      dash.dependencies.Output('ma-fig', 'figure'),
      dash.dependencies.Output('volume-fig', 'figure'),
      dash.dependencies.Output('rsi-fig', 'figure'),
-     dash.dependencies.Output('price-comparison-fig', 'figure'),
+     dash.dependencies.Output('macd-fig', 'figure'),
+     dash.dependencies.Output('bollinger-fig', 'figure'),
+     dash.dependencies.Output('momentum-fig', 'figure'),
+     dash.dependencies.Output('vwap-fig', 'figure'),
+     dash.dependencies.Output('sentiment-fig', 'figure'),
      dash.dependencies.Output('regression-fig', 'figure')],
     [dash.dependencies.Input('interval-component', 'n_intervals')]
 )
