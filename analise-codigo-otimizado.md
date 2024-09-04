@@ -13,9 +13,6 @@ Acurácia: 83.47%
 Matriz de Confusão: Mostra bom desempenho em ambas as classes, especialmente na classe "True".
 F1-Score: Alto para ambas as classes, indicando um equilíbrio razoável entre precisão e recall.
 
-Considerações sobre a Convergência
-O aviso de "ConvergenceWarning" sugere que o modelo não convergiu completamente dentro das 1000 iterações permitidas. Isso pode ser resolvido de algumas maneiras:
-
 Aumentar o Número de Iterações:
 
 Você pode aumentar o número máximo de iterações (max_iter) para dar ao modelo mais tempo para convergir.

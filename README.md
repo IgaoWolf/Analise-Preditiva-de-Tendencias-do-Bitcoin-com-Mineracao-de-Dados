@@ -1,5 +1,7 @@
 # Previsão de Tendências do Bitcoin Usando Mineração de Dados e Aprendizado de Máquina
 
+### Lembrando que o horário está como UTC
+
 ## Resumo Executivo
 
 Este projeto tem como objetivo prever a tendência de alta ou baixa do Bitcoin com base em dados históricos. Utilizamos técnicas de mineração de dados e aprendizado de máquina para construir um modelo preditivo, avaliar seu desempenho e implementá-lo em um ambiente onde previsões podem ser feitas com base em dados atualizados. Os métodos incluem coleta de dados da API do Yahoo Finance, exploração e limpeza dos dados, criação de features, otimização de hiperparâmetros e validação cruzada. Os resultados indicam que o modelo escolhido oferece boa precisão na previsão de tendências, mas há espaço para melhorias futuras.
@@ -52,7 +54,7 @@ Desenvolvemos uma API usando Flask para servir o modelo em produção e permitir
 
 ### Desempenho do Modelo
 
-O modelo apresentou uma acurácia de X%, com precisão de Y% e recall de Z%. O AUC-ROC foi de W%, indicando um bom desempenho geral.
+O modelo apresentou uma acurácia de 84.30%, com precisão de 80.00% para a classe 'False' e 90.00% para a classe 'True', e recall de 90.34% para a classe 'False' e 78.61% para a classe 'True'. O F1-Score médio foi de 84.47%, indicando um bom desempenho geral.
 
 ### Visualizações de Dados
 
