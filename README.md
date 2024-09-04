@@ -1,3 +1,5 @@
+https://youtu.be/9vpEJ1P3vxo
+
 ```markdown
 # Análise Preditiva de Tendências do Bitcoin com Mineração de Dados
 
