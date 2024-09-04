@@ -1,5 +1,3 @@
-### Arquivo `README.md`
-
 ```markdown
 # Análise Preditiva de Tendências do Bitcoin com Mineração de Dados
 
@@ -38,8 +36,6 @@ Este projeto utiliza técnicas de mineração de dados e aprendizado de máquina
    ```bash
    pip install -r requirements.txt
    ```
-   Certifique-se de que o arquivo `requirements.txt` contenha todas as dependências necessárias, como `Flask`, `pandas`, `scikit-learn`, e `joblib`.
-
 ## Uso
 
 ### 1. Pré-processamento e Limpeza dos Dados
