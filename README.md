@@ -87,4 +87,3 @@ Sinta-se à vontade para enviar pull requests e abrir issues para sugerir melhor
 ## Contato
 
 Para dúvidas ou sugestões, entre em contato pelo e-mail: igaowolf@gmail.com.
-```
