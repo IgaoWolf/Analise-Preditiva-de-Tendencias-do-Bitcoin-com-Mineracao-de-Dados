@@ -9,7 +9,7 @@ import joblib
 import yfinance as yf
 from sklearn.linear_model import LinearRegression
 from apscheduler.schedulers.background import BackgroundScheduler
-import pytz  # Importar pytz para conversão de fuso horário
+import pytz
 
 # Inicializar o servidor Flask
 server = Flask(__name__)
@@ -29,8 +29,8 @@ def convert_to_brasilia_time(utc_time):
 # Função para coletar dados em tempo real da API do Yahoo Finance
 def fetch_real_time_data():
     global latest_data
-    symbol = "BTC-USD"  # Exemplo: símbolo do Bitcoin
-    data = yf.download(tickers=symbol, period='1d', interval='1m')  # Coletar dados de 1 dia em intervalos de 1 minuto
+    symbol = "BTC-USD"
+    data = yf.download(tickers=symbol, period='1d', interval='1m')
     data.reset_index(inplace=True)
     
     # Converte a coluna 'Datetime' para o horário de Brasília
@@ -137,7 +137,7 @@ app.layout = html.Div([
     dcc.Graph(id='rsi-fig'),
     dcc.Graph(id='price-comparison-fig'),
     dcc.Graph(id='regression-fig'),
-    dcc.Interval(id='interval-component', interval=30*1000, n_intervals=0)  # Atualiza a cada 30 segundos
+    dcc.Interval(id='interval-component', interval=10*1000, n_intervals=0, max_intervals=-1)  # Atualiza a cada 10 segundos
 ])
 
 # Callback para atualizar os gráficos
