@@ -9,7 +9,7 @@ import yfinance as yf
 from sklearn.linear_model import LinearRegression
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
-import backtrader as bt 
+import backtrader as bt
 
 # Inicializar o servidor Flask
 server = Flask(__name__)
@@ -84,7 +84,7 @@ def run_backtest():
     print(f"Lucro: {profit}")
 
     # Extrair os resultados do backtest para plotagem com Dash
-    df_result = pd.DataFrame({'Date': df.index, 'Close': df['Close'], 'Cash': cerebro.broker.getvalue()})
+    df_result = pd.DataFrame({'Date': df.index, 'Close': df['Close'], 'Cash': final_cash})
     backtest_fig = px.line(df_result, x='Date', y='Cash', title='Simulação de Backtest com Saldo Simulado')
 
     return backtest_fig, profit
@@ -122,8 +122,6 @@ def update_graphs():
                                                      increasing_line_color='green', decreasing_line_color='red')])
     candlestick_fig.update_layout(title='Gráfico de Candlestick do Bitcoin', xaxis_title='Data', yaxis_title='Preço')
 
-    df['SMA_10'] = df['Close'].rolling(window=10).mean()
-    df['SMA_30'] = df['Close'].rolling(window=30).mean()
     ma_fig = px.line(df, x='Date', y=['Close', 'SMA_10', 'SMA_30'], title='Preço de Fechamento e Médias Móveis', labels={'value': 'Preço', 'Date': 'Data'})
     ma_fig.update_traces(marker=dict(size=2))
 
