@@ -83,9 +83,11 @@ def run_backtest():
     print(f"Saldo final: {final_cash}")
     print(f"Lucro: {profit}")
 
-    # Plotar Resultados do Backtest
-    cerebro.plot()
-    return None, None  # No caso, o backtest é plotado diretamente
+    # Extrair os resultados do backtest para plotagem com Dash
+    df_result = pd.DataFrame({'Date': df.index, 'Close': df['Close'], 'Cash': cerebro.broker.getvalue()})
+    backtest_fig = px.line(df_result, x='Date', y='Cash', title='Simulação de Backtest com Saldo Simulado')
+
+    return backtest_fig, profit
 
 # Função para atualizar os gráficos com os dados mais recentes
 def update_graphs():
