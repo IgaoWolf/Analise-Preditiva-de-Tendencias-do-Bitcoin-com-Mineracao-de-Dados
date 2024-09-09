@@ -9,7 +9,7 @@ import yfinance as yf
 from sklearn.linear_model import LinearRegression
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
-import backtrader as bt  # Importa a biblioteca Backtrader
+import backtrader as bt 
 
 # Inicializar o servidor Flask
 server = Flask(__name__)
