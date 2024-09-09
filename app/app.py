@@ -2,21 +2,17 @@ import dash
 from dash import dcc, html
 import plotly.express as px
 import plotly.graph_objects as go
-from flask import Flask, request, jsonify
+from flask import Flask
 import pandas as pd
 import numpy as np
-import joblib
 import yfinance as yf
 from sklearn.linear_model import LinearRegression
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
+import backtrader as bt  # Importa a biblioteca Backtrader
 
 # Inicializar o servidor Flask
 server = Flask(__name__)
-
-# Carregar o modelo treinado
-model_path = 'models/best_model.pkl'
-model = joblib.load(model_path)
 
 # Variável global para armazenar os dados mais recentes
 latest_data = pd.DataFrame()
@@ -48,27 +44,48 @@ scheduler.start()
 # Carregar dados iniciais
 fetch_real_time_data()
 
-# Função de predição em tempo real
-@server.route('/predict', methods=['POST'])
-def predict():
-    data = request.get_json()
-    if not data:
-        return jsonify({'status': 'failure', 'error': 'No data provided'}), 400
-
-    try:
-        input_data = pd.DataFrame([data])
-        expected_features = ['Adj Close', 'High', 'Low', 'Volume', 'EMA_5', 'EMA_10']
-        missing_features = [feature for feature in expected_features if feature not in input_data.columns]
-        if missing_features:
-            return jsonify({'status': 'failure', 'error': f'Missing features: {missing_features}'}), 400
-
-        prediction = model.predict(input_data)
-        return jsonify({'status': 'success', 'prediction': prediction.tolist()})
-    except Exception as e:
-        return jsonify({'status': 'failure', 'error': str(e)}), 500
-
 # Integrar Dash com Flask
 app = dash.Dash(__name__, server=server, url_base_pathname='/dashboard/')
+
+# Definição da estratégia de Backtrader
+class SmaCross(bt.SignalStrategy):
+    def __init__(self):
+        sma1 = bt.indicators.SimpleMovingAverage(self.data.close, period=10)
+        sma2 = bt.indicators.SimpleMovingAverage(self.data.close, period=30)
+        self.signal_add(bt.SIGNAL_LONG, bt.ind.CrossOver(sma1, sma2))
+
+# Função para realizar o backtest com saldo simulado usando Backtrader
+def run_backtest():
+    global latest_data
+    df = latest_data.copy()
+    df['Date'] = pd.to_datetime(df['Datetime'])
+    
+    # Preparar dados para o Backtrader
+    df.set_index('Date', inplace=True)
+    df_bt = bt.feeds.PandasData(dataname=df)
+
+    # Inicializar o Cerebro de Backtrader
+    cerebro = bt.Cerebro()
+    cerebro.addstrategy(SmaCross)
+    cerebro.adddata(df_bt)
+
+    # Definir saldo inicial
+    cerebro.broker.setcash(10000.0)
+
+    # Executar o Backtest
+    initial_cash = cerebro.broker.getvalue()
+    cerebro.run()
+    final_cash = cerebro.broker.getvalue()
+
+    # Obter resultados
+    profit = final_cash - initial_cash
+    print(f"Saldo inicial: {initial_cash}")
+    print(f"Saldo final: {final_cash}")
+    print(f"Lucro: {profit}")
+
+    # Plotar Resultados do Backtest
+    cerebro.plot()
+    return None, None  # No caso, o backtest é plotado diretamente
 
 # Função para atualizar os gráficos com os dados mais recentes
 def update_graphs():
@@ -76,10 +93,25 @@ def update_graphs():
     df = latest_data.copy()
     df['Date'] = pd.to_datetime(df['Datetime'])
 
-    # Gráfico de linha para a evolução do preço do Bitcoin
+    # Calcular os indicadores antes de criar o gráfico de correlação
+    df['SMA_10'] = df['Close'].rolling(window=10).mean()
+    df['SMA_30'] = df['Close'].rolling(window=30).mean()
+
+    # Cálculo do RSI
+    delta = df['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    df['RSI'] = 100 - (100 / (1 + rs))
+
+    # Correção do Gráfico de Correlação
+    correlation_features = df[['Close', 'SMA_10', 'SMA_30', 'RSI']].dropna()
+    corr = correlation_features.corr()
+    heatmap_fig = px.imshow(corr, title='Mapa de Correlação entre Variáveis', labels={'color': 'Correlação'})
+
+    # Gráficos existentes
     line_fig = px.line(df, x='Date', y='Close', title='Evolução do Preço do Bitcoin', labels={'Date': 'Data', 'Close': 'Preço de Fechamento'})
 
-    # Gráfico de candlestick para visualizar os movimentos de mercado
     candlestick_fig = go.Figure(data=[go.Candlestick(x=df['Date'],
                                                      open=df['Open'],
                                                      high=df['High'],
@@ -88,57 +120,35 @@ def update_graphs():
                                                      increasing_line_color='green', decreasing_line_color='red')])
     candlestick_fig.update_layout(title='Gráfico de Candlestick do Bitcoin', xaxis_title='Data', yaxis_title='Preço')
 
-    # Heatmap de correlação entre variáveis numéricas
-    numerical_df = df.select_dtypes(include=['float64', 'int64'])
-    corr = numerical_df.corr()
-    heatmap_fig = px.imshow(corr, title='Mapa de Correlação entre Variáveis', labels={'color': 'Correlação'})
-
-    # Gráfico de Média Móvel
     df['SMA_10'] = df['Close'].rolling(window=10).mean()
     df['SMA_30'] = df['Close'].rolling(window=30).mean()
     ma_fig = px.line(df, x='Date', y=['Close', 'SMA_10', 'SMA_30'], title='Preço de Fechamento e Médias Móveis', labels={'value': 'Preço', 'Date': 'Data'})
     ma_fig.update_traces(marker=dict(size=2))
 
-    # Gráfico de Volume de Negociação
     volume_fig = px.bar(df, x='Date', y='Volume', title='Volume de Negociação do Bitcoin', labels={'Date': 'Data', 'Volume': 'Volume de Negociação'})
 
-    # Gráfico de RSI (Índice de Força Relativa)
-    delta = df['Close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    df['RSI'] = 100 - (100 / (1 + rs))
     rsi_fig = px.line(df, x='Date', y='RSI', title='Índice de Força Relativa (RSI)', labels={'Date': 'Data', 'RSI': 'RSI'})
     rsi_fig.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Sobrecomprado", annotation_position="top left")
     rsi_fig.add_hline(y=30, line_dash="dash", line_color="green", annotation_text="Sobrevendido", annotation_position="bottom right")
 
-    # Gráfico de MACD (Moving Average Convergence Divergence)
     df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
     df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
     df['MACD'] = df['EMA_12'] - df['EMA_26']
     df['Signal Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
     macd_fig = px.line(df, x='Date', y=['MACD', 'Signal Line'], title='MACD e Linha de Sinal', labels={'value': 'Valor', 'Date': 'Data'})
 
-    # Gráfico de Bollinger Bands
     df['Upper Band'] = df['SMA_10'] + (2 * df['Close'].rolling(window=10).std())
     df['Lower Band'] = df['SMA_10'] - (2 * df['Close'].rolling(window=10).std())
     bollinger_fig = px.line(df, x='Date', y=['Close', 'Upper Band', 'Lower Band'], title='Bollinger Bands', labels={'value': 'Preço', 'Date': 'Data'})
 
-    # Gráfico de Momentum
     df['Momentum'] = df['Close'].diff(4)
     momentum_fig = px.line(df, x='Date', y='Momentum', title='Momentum do Preço do Bitcoin', labels={'Date': 'Data', 'Momentum': 'Momentum'})
 
-    # Gráfico de VWAP (Volume Weighted Average Price)
     df['CumVolume'] = df['Volume'].cumsum()
     df['CumCloseVol'] = (df['Close'] * df['Volume']).cumsum()
     df['VWAP'] = df['CumCloseVol'] / df['CumVolume']
     vwap_fig = px.line(df, x='Date', y='VWAP', title='VWAP - Volume Weighted Average Price', labels={'Date': 'Data', 'VWAP': 'VWAP'})
 
-    # Gráfico de Análise de Sentimento (Este é um exemplo, ajuste conforme suas fontes de dados)
-    df['Sentiment'] = np.random.uniform(-1, 1, len(df))  # Dados simulados de sentimento
-    sentiment_fig = px.bar(df, x='Date', y='Sentiment', title='Análise de Sentimento do Mercado', labels={'Date': 'Data', 'Sentiment': 'Sentimento'})
-
-    # Gráfico de Regressão Linear
     df['Date_ordinal'] = pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)
     X = df[['Date_ordinal']]
     y = df['Close']
@@ -147,7 +157,10 @@ def update_graphs():
     regression_fig = px.scatter(df, x='Date', y='Close', title='Previsão do Preço Usando Regressão Linear')
     regression_fig.add_trace(go.Scatter(x=df['Date'], y=df['Predicted_Close'], mode='lines', name='Linha de Regressão'))
 
-    return line_fig, candlestick_fig, heatmap_fig, ma_fig, volume_fig, rsi_fig, macd_fig, bollinger_fig, momentum_fig, vwap_fig, sentiment_fig, regression_fig
+    # Adicionar resultado do backtest
+    backtest_fig, report = run_backtest()
+
+    return line_fig, candlestick_fig, heatmap_fig, ma_fig, volume_fig, rsi_fig, macd_fig, bollinger_fig, momentum_fig, vwap_fig, regression_fig, backtest_fig
 
 # Configurar o layout do Dash
 app.layout = html.Div([
@@ -162,8 +175,8 @@ app.layout = html.Div([
     dcc.Graph(id='bollinger-fig'),
     dcc.Graph(id='momentum-fig'),
     dcc.Graph(id='vwap-fig'),
-    dcc.Graph(id='sentiment-fig'),
     dcc.Graph(id='regression-fig'),
+    dcc.Graph(id='backtest-fig'),  # Novo gráfico para o backtest
     dcc.Interval(id='interval-component', interval=10*1000, n_intervals=0)  # Atualiza a cada 10 segundos
 ])
 
@@ -179,8 +192,8 @@ app.layout = html.Div([
      dash.dependencies.Output('bollinger-fig', 'figure'),
      dash.dependencies.Output('momentum-fig', 'figure'),
      dash.dependencies.Output('vwap-fig', 'figure'),
-     dash.dependencies.Output('sentiment-fig', 'figure'),
-     dash.dependencies.Output('regression-fig', 'figure')],
+     dash.dependencies.Output('regression-fig', 'figure'),
+     dash.dependencies.Output('backtest-fig', 'figure')],  # Saída adicional para o gráfico de backtest
     [dash.dependencies.Input('interval-component', 'n_intervals')]
 )
 def update_figures(n_intervals):
